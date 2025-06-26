@@ -6,6 +6,6 @@ import (
 	"os"
 )
 
-func chown(_ string, _ os.FileInfo) error {
+func chown(_ string, _ os.FileInfo, _, _ int) error {
 	return nil
 }

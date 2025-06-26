@@ -107,6 +107,10 @@ type Logger struct {
 	// using gzip. The default is not to perform compression.
 	Compress bool `json:"compress" yaml:"compress"`
 
+	Mode os.FileMode
+	Uid  int
+	Gid  int
+
 	size int64
 	file *os.File
 	mu   sync.Mutex
@@ -212,11 +216,8 @@ func (l *Logger) openNew() error {
 	}
 
 	name := l.filename()
-	mode := os.FileMode(0600)
 	info, err := osStat(name)
 	if err == nil {
-		// Copy the mode off the old logfile.
-		mode = info.Mode()
 		// move the existing file
 		newname := backupName(name, l.LocalTime)
 		if err := os.Rename(name, newname); err != nil {
@@ -224,7 +225,7 @@ func (l *Logger) openNew() error {
 		}
 
 		// this is a no-op anywhere but linux
-		if err := chown(name, info); err != nil {
+		if err := chown(name, info, l.Uid, l.Gid); err != nil {
 			return err
 		}
 	}
@@ -232,7 +233,7 @@ func (l *Logger) openNew() error {
 	// we use truncate here because this should only get called when we've moved
 	// the file ourselves. if someone else creates the file in the meantime,
 	// just wipe out the contents.
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, l.Mode)
 	if err != nil {
 		return fmt.Errorf("can't open new logfile: %s", err)
 	}
@@ -477,7 +478,7 @@ func compressLogFile(src, dst string) (err error) {
 		return fmt.Errorf("failed to stat log file: %v", err)
 	}
 
-	if err := chown(dst, fi); err != nil {
+	if err := chown(dst, fi, 0, 0); err != nil {
 		return fmt.Errorf("failed to chown compressed log file: %v", err)
 	}
 
