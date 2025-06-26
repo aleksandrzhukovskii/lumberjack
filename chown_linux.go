@@ -16,10 +16,10 @@ func chown(name string, info os.FileInfo, uid, gid int) error {
 	f.Close()
 	stat := info.Sys().(*syscall.Stat_t)
 	if uid == 0 {
-		uid = stat.Uid
+		uid = int(stat.Uid)
 	}
 	if gid == 0 {
-		gid = stat.Gid
+		gid = int(stat.Gid)
 	}
 	return osChown(name, int(stat.Uid), int(stat.Gid))
 }
